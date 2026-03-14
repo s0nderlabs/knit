@@ -1,0 +1,23 @@
+{
+  "name": "knit-backend",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.75",
+    "@noble/hashes": "^1.7.1",
+    "@parity/resolc": "^1.0.0",
+    "hono": "^4.7.4",
+    "postgres": "^3.4.5",
+    "solc": "^0.8.28",
+    "viem": "^2.23.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.5",
+    "typescript": "^5.7.3"
+  }
+}

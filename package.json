@@ -1,0 +1,8 @@
+{
+  "name": "knit",
+  "private": true,
+  "workspaces": ["frontend", "backend", "contracts", "mcp"],
+  "scripts": {
+    "dev": "bun run --filter knit-backend dev & bun run --filter frontend dev -- --port 3002 & wait"
+  }
+}
