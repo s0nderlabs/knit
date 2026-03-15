@@ -178,6 +178,20 @@ export function useChat(options?: UseChatOptions) {
               const tc: ToolCall = { name: data.name, input: data.input || {} };
               toolCallsRef.current = [...toolCallsRef.current, tc];
               onToolCallRef.current?.(tc);
+
+              // Finalize the streaming message so typing indicator clears
+              if (streamingIdRef.current) {
+                const currentContent = streamingContentRef.current;
+                const currentToolCalls = [...toolCallsRef.current];
+                setState((prev) => ({
+                  ...prev,
+                  messages: prev.messages.map((m) =>
+                    m.id === streamingIdRef.current
+                      ? { ...m, content: currentContent, toolCalls: currentToolCalls, isStreaming: false }
+                      : m,
+                  ),
+                }));
+              }
             }
 
             if (event === "audit_start") {

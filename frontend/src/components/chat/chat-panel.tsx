@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useWorkspace, type AuditFinding, type TestResult, type TestSummary } from "@/contexts/workspace-context";
 import { useChat, type Message } from "@/hooks/use-chat";
 import { InputBar } from "./input-bar";
@@ -83,10 +83,13 @@ export function ChatPanel() {
   );
 
   const pendingQuestion = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      if (msg.role !== "assistant" || !msg.toolCalls) continue;
-      for (const tc of msg.toolCalls) {
+    // Only show if the very last message is an assistant with ask_question
+    // (no user message after it = not yet answered)
+    if (messages.length === 0) return null;
+    const last = messages[messages.length - 1];
+    if (last.role === "user") return null; // user already answered
+    if (last.role === "assistant" && last.toolCalls) {
+      for (const tc of last.toolCalls) {
         if (tc.name === "ask_question") {
           return tc.input as { question: string; options: string[] };
         }
@@ -108,7 +111,7 @@ export function ChatPanel() {
 
   if (!hasMessages) {
     return (
-      <div className="flex flex-1 flex-col pt-16">
+      <div className="flex flex-1 flex-col">
         <ExamplePrompts onSelect={handleExampleSelect} inputBar={inputBarElement} />
       </div>
     );
@@ -117,15 +120,16 @@ export function ChatPanel() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto pt-16">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-4 px-5 py-5">
-          {messages.map((message) => (
+          {messages.map((message, idx) => (
             <MessageBubble
               key={message.id}
               message={message}
               sendMessage={sendMessage}
               reset={reset}
               selectedModules={selectedModules}
+              isPending={idx === messages.length - 1 && message.role === "assistant"}
             />
           ))}
 
@@ -175,38 +179,10 @@ export function ChatPanel() {
         </div>
       </div>
 
-      {/* Bottom input */}
-      <AnimatePresence mode="wait">
-        {pendingQuestion ? (
-          <motion.div
-            key="question"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="border-t border-border/40 px-4 py-3"
-          >
-            <div className="mx-auto max-w-3xl">
-              <ClarifyingQuestion
-                question={pendingQuestion.question}
-                options={pendingQuestion.options}
-                onConfirm={(selected) => {
-                  sendMessage(selected, selectedModules.map((m) => m.id));
-                }}
-              />
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="input"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="px-4 pb-4 pt-2"
-          >
-            {inputBarElement}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Bottom input — always visible */}
+      <div className="px-4 pb-4 pt-2">
+        {inputBarElement}
+      </div>
     </div>
   );
 }
@@ -216,15 +192,32 @@ interface MessageBubbleProps {
   sendMessage: (text: string, modules: string[]) => void;
   reset: () => void;
   selectedModules: { id: string }[];
+  isPending?: boolean;
 }
 
-function MessageBubble({ message, sendMessage, reset, selectedModules }: MessageBubbleProps) {
+function MessageBubble({ message, sendMessage, reset, selectedModules, isPending }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   const toolCallUI = useMemo(() => {
     if (!message.toolCalls || message.toolCalls.length === 0) return null;
 
     return message.toolCalls.map((tc, i) => {
+      if (tc.name === "ask_question") {
+        const q = tc.input as { question: string; options: string[] };
+        return (
+          <div key={`question-${i}`} className="my-3">
+            <ClarifyingQuestion
+              question={q.question}
+              options={q.options}
+              onConfirm={(selected) => {
+                sendMessage(selected, selectedModules.map((m) => m.id));
+              }}
+              disabled={!isPending}
+            />
+          </div>
+        );
+      }
+
       if (tc.name === "show_plan") {
         const planInput = tc.input as {
           contractName: string;

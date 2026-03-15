@@ -7,20 +7,31 @@ interface ClarifyingQuestionProps {
   question: string;
   options: string[];
   onConfirm: (selected: string) => void;
+  disabled?: boolean;
 }
 
 export function ClarifyingQuestion({
   question,
   options,
   onConfirm,
+  disabled,
 }: ClarifyingQuestionProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [answered, setAnswered] = useState(false);
+
+  // Already answered — show compact state
+  if (disabled || answered) {
+    return (
+      <div className="rounded-xl border border-border/50 bg-accent-light/50 px-4 py-3">
+        <p className="text-xs text-ink-tertiary">{question}</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25 }}
       className="rounded-2xl border border-border bg-surface p-4"
     >
@@ -64,7 +75,12 @@ export function ClarifyingQuestion({
       </div>
 
       <button
-        onClick={() => selected && onConfirm(selected)}
+        onClick={() => {
+          if (selected) {
+            setAnswered(true);
+            onConfirm(selected);
+          }
+        }}
         disabled={!selected}
         className="mt-3 w-full rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink/85 disabled:opacity-40"
       >

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { getModulesByCategory } from "@/lib/modules/catalog";
 import { ModuleTag } from "@/components/modules/module-tag";
+import { WalletButton } from "@/components/wallet-button";
 import type { Module } from "@/lib/modules/catalog";
 
 const sections = [
@@ -21,7 +22,17 @@ export function ModuleBar() {
   return (
     <div className="relative z-40 flex shrink-0">
       {/* Collapsed strip */}
-      <div className="flex h-full w-11 flex-col items-center border-r border-border/40 pt-16">
+      <div className="flex h-full w-11 flex-col items-center border-r border-border/40">
+        {/* Logo at top */}
+        <div className="flex h-11 w-11 items-center justify-center">
+          <span className="font-[family-name:var(--font-display)] text-[15px] tracking-tight text-ink">
+            K
+          </span>
+        </div>
+
+        <div className="h-px w-6 bg-border/40" />
+
+        {/* Module toggle */}
         <button
           onClick={() => setOpen(!open)}
           className="mt-2 flex h-9 w-9 items-center justify-center rounded-lg text-ink-tertiary transition-colors hover:bg-accent-light hover:text-ink-secondary"
@@ -40,6 +51,14 @@ export function ModuleBar() {
             {selectedModules.length}
           </span>
         )}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Wallet at bottom */}
+        <div className="mb-3 flex flex-col items-center">
+          <WalletButton compact />
+        </div>
       </div>
 
       {/* Expanded overlay */}
@@ -62,7 +81,7 @@ export function ModuleBar() {
               className="absolute left-11 top-0 z-40 h-full overflow-hidden border-r border-border/40 bg-white shadow-[4px_0_16px_rgba(0,0,0,0.04)]"
             >
               <div className="flex h-full w-[260px] flex-col">
-                <div className="flex items-center justify-between border-b border-border/40 px-4 pb-3 pt-[72px]">
+                <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
                   <span className="text-sm font-semibold text-ink">Modules</span>
                   <button
                     onClick={() => setOpen(false)}
