@@ -40,6 +40,7 @@ export function CodePanel() {
     compileTarget,
     deployState,
     setDeployState,
+    deployError,
     setDeployError,
     setCompiledAbi,
     setCompiledBytecode,
@@ -100,10 +101,8 @@ export function CodePanel() {
       return;
     }
 
-    setDeployState("deploying");
-
     try {
-      setDeployState("confirming");
+      setDeployState("deploying");
       const data = await apiPost<{
         success: boolean;
         error?: string;
@@ -159,11 +158,11 @@ export function CodePanel() {
           />
 
           <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
+            initial={{ x: "100%", opacity: 0.8 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0.8 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-14 bottom-0 z-30 flex w-full flex-col border-l border-border bg-surface lg:relative lg:top-0 lg:w-[50%] lg:min-w-[480px]"
+            className="fixed right-0 top-14 bottom-0 z-30 flex w-full flex-col border-l border-border/50 bg-surface lg:relative lg:top-0 lg:w-[50%] lg:min-w-[480px]"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
@@ -193,6 +192,7 @@ export function CodePanel() {
                       strokeLinejoin="round"
                     />
                   </svg>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-accent"><path d="M7 1L12 4V10L7 13L2 10V4L7 1Z" stroke="currentColor" strokeWidth="1.2"/></svg>
                   <span className="font-mono text-xs font-semibold text-ink">
                     {contractName || "Contract"}.sol
                   </span>
@@ -209,9 +209,17 @@ export function CodePanel() {
                     deployState === "compiling" ||
                     deployState === "deploying"
                   }
-                  className="rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-surface transition-colors hover:bg-ink/90 disabled:opacity-30"
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-30 ${
+                    deployState === "compiled"
+                      ? "bg-success text-white"
+                      : "bg-ink text-white hover:bg-ink/85"
+                  }`}
                 >
-                  Compile
+                  {deployState === "compiling"
+                    ? "Compiling..."
+                    : deployState === "compiled"
+                      ? "Compiled"
+                      : "Compile"}
                 </button>
 
                 {/* Deploy button */}
@@ -221,7 +229,7 @@ export function CodePanel() {
                     deployState !== "compiled" || !walletAddress
                   }
                   title={!walletAddress ? "Connect wallet to deploy" : undefined}
-                  className="rounded-md bg-indigo px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-hover disabled:opacity-30"
+                  className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink/85 disabled:opacity-30"
                 >
                   {walletAddress ? "Deploy" : "Connect wallet"}
                 </button>
@@ -244,13 +252,34 @@ export function CodePanel() {
               </div>
             </div>
 
+            {/* Error/success banner */}
+            {deployState === "error" && deployError && (
+              <div className="bg-error-light text-error border-b border-error/20 px-4 py-2 text-xs">
+                <strong>Error:</strong> {deployError}
+                <button
+                  onClick={() => {
+                    setDeployState("idle");
+                    setDeployError(null);
+                  }}
+                  className="ml-2 underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+            {deployState === "compiled" && (
+              <div className="bg-success-light text-success border-b border-success/20 px-4 py-2 text-xs">
+                Compiled successfully. {walletAddress ? "Ready to deploy." : "Connect wallet to deploy."}
+              </div>
+            )}
+
             {/* Editor or deploy state */}
             <div className="flex flex-1 flex-col overflow-hidden">
               {deployState === "done" && deployResult ? (
                 <div className="flex-1 overflow-y-auto p-4">
                   <DeployReceipt />
                 </div>
-              ) : deployState !== "idle" && deployState !== "compiled" ? (
+              ) : deployState === "deploying" || deployState === "confirming" || deployState === "stamping" ? (
                 <div className="flex-1 overflow-y-auto p-4">
                   <DeployFlow />
                 </div>

@@ -6,6 +6,7 @@ export type ModuleCategory = "oz" | "polkadot" | "imported";
 export interface Module {
   id: string;
   name: string;
+  displayName?: string;
   description: string;
   category: ModuleCategory;
   tags: string[];

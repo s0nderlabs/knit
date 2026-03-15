@@ -35,7 +35,7 @@ export function ChainSelector() {
       <div ref={ref} className="relative">
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-2 rounded-md border border-border bg-base px-2.5 py-1 text-xs font-medium text-ink-secondary transition-colors hover:border-indigo-soft hover:text-ink"
+          className="flex items-center gap-2 rounded-md border border-border bg-base px-2.5 py-1 text-xs font-medium text-ink-secondary transition-colors hover:border-accent-soft hover:text-ink"
         >
           <span className={`h-1.5 w-1.5 rounded-full ${current.dot}`} />
           {current.name}
@@ -57,7 +57,7 @@ export function ChainSelector() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.12 }}
-              className="absolute top-full left-0 z-20 mt-1 min-w-[140px] rounded-lg border border-border bg-surface py-1 shadow-lg"
+              className="absolute top-full left-0 z-20 mt-1 min-w-[140px] rounded-xl border border-border bg-surface py-1 shadow-lg"
             >
               {chains.map((chain) => (
                 <button
@@ -68,7 +68,7 @@ export function ChainSelector() {
                   }}
                   className={`flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors ${
                     chain.id === selectedChainId
-                      ? "bg-indigo-light text-indigo"
+                      ? "bg-accent-light text-ink font-medium"
                       : "text-ink-secondary hover:bg-base hover:text-ink"
                   }`}
                 >

@@ -5,7 +5,7 @@ export const privyConfig: PrivyClientConfig = {
   loginMethods: ["email", "google", "wallet"],
   appearance: {
     theme: "light",
-    accentColor: "#4F46E5",
+    accentColor: "#242424",
     walletChainType: "ethereum-only",
     walletList: ["metamask", "coinbase_wallet", "rainbow", "wallet_connect"],
   },

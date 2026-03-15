@@ -22,38 +22,42 @@ export function ClarifyingQuestion({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.25 }}
-      className="rounded-xl border border-indigo-soft bg-indigo-light/40 p-4"
+      className="rounded-2xl border border-border bg-surface p-4"
     >
-      <p className="mb-3 text-sm font-medium text-ink">{question}</p>
+      <p className="mb-3 text-sm font-medium text-ink font-[family-name:var(--font-display)]">{question}</p>
 
       <div className="space-y-2">
         {options.map((option) => (
           <button
             key={option}
             onClick={() => setSelected(option)}
-            className={`w-full rounded-lg border p-3 text-left text-sm transition-all ${
+            className={`w-full rounded-xl p-3 text-left text-sm transition-all ${
               selected === option
-                ? "border-indigo bg-surface text-ink shadow-sm"
-                : "border-border bg-surface/60 text-ink-secondary hover:border-indigo-soft hover:bg-surface"
+                ? "bg-ink text-white"
+                : "border border-border hover:border-ink/20 hover:bg-accent-light"
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                  selected === option
-                    ? "border-indigo"
-                    : "border-border"
-                }`}
-              >
-                {selected === option && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="h-2 w-2 rounded-full bg-indigo"
+            <div className="flex items-center justify-between gap-3">
+              <span>{option}</span>
+              {selected === option && (
+                <motion.svg
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className="shrink-0"
+                >
+                  <path
+                    d="M3.5 8.5L6.5 11.5L12.5 4.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
-                )}
-              </div>
-              {option}
+                </motion.svg>
+              )}
             </div>
           </button>
         ))}
@@ -62,9 +66,9 @@ export function ClarifyingQuestion({
       <button
         onClick={() => selected && onConfirm(selected)}
         disabled={!selected}
-        className="mt-3 w-full rounded-lg bg-indigo px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-hover disabled:opacity-40"
+        className="mt-3 w-full rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink/85 disabled:opacity-40"
       >
-        Confirm
+        Continue
       </button>
     </motion.div>
   );

@@ -11,25 +11,25 @@ interface MarkdownRendererProps {
 const knitCSS = `
   [data-streamdown="code-block"] {
     border-radius: 0.75rem;
-    border: 1px solid #E5E7EB;
+    border: 1px solid #E8E8E8;
     overflow: hidden;
     margin: 1rem 0;
   }
   [data-streamdown="code-block-header"] {
-    background-color: #F3F4F6;
-    border-bottom: 1px solid #E5E7EB;
+    background-color: #F0F0F0;
+    border-bottom: 1px solid #E8E8E8;
     padding: 0.5rem 1rem;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.7rem;
     color: #6B7280;
   }
   [data-streamdown="code-block-body"] {
-    background-color: #F9FAFB;
+    background-color: #F4F4F4;
     padding: 1rem;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
     line-height: 1.6;
-    color: #111111;
+    color: #242424;
     overflow-x: auto;
   }
   [data-streamdown="code-block-copy-button"],
@@ -41,7 +41,7 @@ const knitCSS = `
   }
   [data-streamdown="code-block-copy-button"]:hover,
   [data-streamdown="code-block-download-button"]:hover {
-    color: #4F46E5;
+    color: #242424;
   }
 `;
 
@@ -58,23 +58,23 @@ const p = (props: ComponentPropsWithoutRef<"p">) => (
   <p className="mb-3 leading-relaxed text-ink/90" {...props} />
 );
 const ul = (props: ComponentPropsWithoutRef<"ul">) => (
-  <ul className="list-disc pl-5 mb-3 marker:text-indigo" {...props} />
+  <ul className="list-disc pl-5 mb-3 marker:text-accent" {...props} />
 );
 const ol = (props: ComponentPropsWithoutRef<"ol">) => (
-  <ol className="list-decimal pl-5 mb-3 marker:text-indigo" {...props} />
+  <ol className="list-decimal pl-5 mb-3 marker:text-accent" {...props} />
 );
 const li = (props: ComponentPropsWithoutRef<"li">) => (
   <li className="leading-relaxed text-ink/90 mb-1" {...props} />
 );
 const blockquote = (props: ComponentPropsWithoutRef<"blockquote">) => (
   <blockquote
-    className="border-l-2 border-indigo/50 pl-4 my-4 text-ink-secondary italic"
+    className="border-l-2 border-accent/50 pl-4 my-4 text-ink-secondary italic"
     {...props}
   />
 );
 const a = (props: ComponentPropsWithoutRef<"a">) => (
   <a
-    className="text-indigo hover:text-indigo-hover transition-colors underline underline-offset-2"
+    className="text-accent hover:text-accent-hover transition-colors underline underline-offset-2"
     target="_blank"
     rel="noopener noreferrer"
     {...props}

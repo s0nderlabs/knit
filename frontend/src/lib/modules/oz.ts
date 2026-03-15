@@ -4,6 +4,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-erc20",
     name: "ERC-20",
+    displayName: "Token",
     description: "Standard fungible token",
     category: "oz",
     tags: ["token", "fungible", "defi"],
@@ -13,6 +14,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-erc721",
     name: "ERC-721",
+    displayName: "NFT",
     description: "Non-fungible token (NFT)",
     category: "oz",
     tags: ["token", "nft", "collectible"],
@@ -22,6 +24,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-erc1155",
     name: "ERC-1155",
+    displayName: "Multi-Token",
     description: "Multi-token standard",
     category: "oz",
     tags: ["token", "multi", "gaming"],
@@ -31,6 +34,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-ownable",
     name: "Ownable",
+    displayName: "Ownership",
     description: "Single-owner access control",
     category: "oz",
     tags: ["access", "ownership"],
@@ -39,6 +43,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-access-control",
     name: "AccessControl",
+    displayName: "Roles",
     description: "Role-based access control",
     category: "oz",
     tags: ["access", "roles"],
@@ -47,6 +52,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-pausable",
     name: "Pausable",
+    displayName: "Emergency Stop",
     description: "Emergency stop mechanism",
     category: "oz",
     tags: ["security", "pause"],
@@ -55,6 +61,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-reentrancy-guard",
     name: "ReentrancyGuard",
+    displayName: "Security Guard",
     description: "Reentrancy attack protection",
     category: "oz",
     tags: ["security", "reentrancy"],
@@ -63,6 +70,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-erc20-votes",
     name: "ERC20Votes",
+    displayName: "Voting Token",
     description: "Token with voting power",
     category: "oz",
     tags: ["governance", "voting", "token"],
@@ -71,6 +79,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-governor",
     name: "Governor",
+    displayName: "DAO",
     description: "On-chain governance system",
     category: "oz",
     tags: ["governance", "dao"],
@@ -79,6 +88,7 @@ export const ozModules: Module[] = [
   {
     id: "oz-upgradeable",
     name: "UUPSUpgradeable",
+    displayName: "Upgradeable",
     description: "UUPS proxy pattern",
     category: "oz",
     tags: ["proxy", "upgrade"],

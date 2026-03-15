@@ -54,6 +54,16 @@ function createImportCallback() {
  * Compile with solc (EVM target).
  * Pre-resolves all imports before calling solc synchronously.
  */
+function resolveRelativePath(from: string, rel: string): string {
+  const dir = from.substring(0, from.lastIndexOf("/"));
+  const parts = dir.split("/");
+  for (const seg of rel.split("/")) {
+    if (seg === "..") parts.pop();
+    else if (seg !== ".") parts.push(seg);
+  }
+  return parts.join("/");
+}
+
 export async function compileEvm(
   sources: Record<string, string>,
   contractName: string
@@ -62,15 +72,19 @@ export async function compileEvm(
   const resolvedSources: Record<string, string> = { ...sources };
   const importCallback = createImportCallback();
 
-  async function resolveImports(source: string) {
+  async function resolveImports(source: string, parentPath?: string) {
     const importRegex = /import\s+.*?["']([^"']+)["']/g;
     let match: RegExpExecArray | null;
     while ((match = importRegex.exec(source)) !== null) {
-      const importPath = match[1];
+      let importPath = match[1];
+      // Resolve relative imports against parent file path
+      if ((importPath.startsWith("./") || importPath.startsWith("../")) && parentPath) {
+        importPath = resolveRelativePath(parentPath, importPath);
+      }
       if (!resolvedSources[importPath]) {
         const contents = await importCallback.resolve(importPath);
         resolvedSources[importPath] = contents;
-        await resolveImports(contents);
+        await resolveImports(contents, importPath);
       }
     }
   }

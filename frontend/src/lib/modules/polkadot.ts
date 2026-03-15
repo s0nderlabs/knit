@@ -4,6 +4,7 @@ export const polkadotModules: Module[] = [
   {
     id: "pc-xcm",
     name: "XCM",
+    displayName: "Cross-Chain",
     description: "Cross-Consensus Messaging — send and execute cross-chain messages",
     category: "polkadot",
     tags: ["cross-chain", "messaging", "xcm"],
@@ -13,6 +14,7 @@ export const polkadotModules: Module[] = [
   {
     id: "pc-system",
     name: "System",
+    displayName: "Polkadot Crypto",
     description: "sr25519 verification, blake2 hashing, account ID conversion",
     category: "polkadot",
     tags: ["crypto", "system", "blake2"],
@@ -21,6 +23,7 @@ export const polkadotModules: Module[] = [
   {
     id: "pc-native-assets",
     name: "Native Assets",
+    displayName: "DOT Token",
     description: "DOT & foreign assets as ERC-20",
     category: "polkadot",
     tags: ["token", "native", "dot"],
@@ -29,6 +32,7 @@ export const polkadotModules: Module[] = [
   {
     id: "pc-storage",
     name: "Storage",
+    displayName: "On-Chain Storage",
     description: "On-chain key-value storage precompile",
     category: "polkadot",
     tags: ["storage", "state"],

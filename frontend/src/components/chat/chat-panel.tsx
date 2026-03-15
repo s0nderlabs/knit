@@ -9,6 +9,7 @@ import { ExamplePrompts } from "./example-prompts";
 import { ClarifyingQuestion } from "./clarifying-question";
 import { PlanDisplay } from "./plan-display";
 import { MarkdownRenderer } from "./markdown-renderer";
+import { TypingIndicator } from "./typing-indicator";
 
 export function ChatPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -30,7 +31,6 @@ export function ChatPanel() {
     },
   });
 
-  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -51,7 +51,6 @@ export function ChatPanel() {
     [sendMessage, selectedModules],
   );
 
-  // Find pending tool calls from the latest assistant message
   const pendingQuestion = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
@@ -67,39 +66,51 @@ export function ChatPanel() {
 
   const hasMessages = messages.length > 0;
 
+  const inputBarElement = (
+    <InputBar
+      value={input}
+      onChange={setInput}
+      onSend={handleSend}
+      isStreaming={isLoading}
+    />
+  );
+
+  if (!hasMessages) {
+    return (
+      <div className="flex flex-1 flex-col pt-16">
+        <ExamplePrompts onSelect={handleExampleSelect} inputBar={inputBarElement} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {!hasMessages ? (
-          <ExamplePrompts onSelect={handleExampleSelect} />
-        ) : (
-          <div className="mx-auto max-w-3xl space-y-4 px-5 py-5">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                sendMessage={sendMessage}
-                reset={reset}
-                selectedModules={selectedModules}
-              />
-            ))}
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto pt-16">
+        <div className="mx-auto max-w-3xl space-y-4 px-5 py-5">
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              sendMessage={sendMessage}
+              reset={reset}
+              selectedModules={selectedModules}
+            />
+          ))}
 
-            {/* Error display */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
-              >
-                {error}
-              </motion.div>
-            )}
-          </div>
-        )}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-lg border border-error/20 bg-error-light px-4 py-2 text-sm text-error"
+            >
+              {error}
+            </motion.div>
+          )}
+        </div>
       </div>
 
-      {/* Input bar — replaced by clarifying question when pending */}
+      {/* Bottom input */}
       <AnimatePresence mode="wait">
         {pendingQuestion ? (
           <motion.div
@@ -107,14 +118,13 @@ export function ChatPanel() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="border-t border-border bg-surface px-4 py-3"
+            className="border-t border-border/40 px-4 py-3"
           >
             <div className="mx-auto max-w-3xl">
               <ClarifyingQuestion
                 question={pendingQuestion.question}
                 options={pendingQuestion.options}
                 onConfirm={(selected) => {
-                  // Send the answer as a new user message
                   sendMessage(selected, selectedModules.map((m) => m.id));
                 }}
               />
@@ -126,13 +136,9 @@ export function ChatPanel() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
+            className="px-4 pb-4 pt-2"
           >
-            <InputBar
-              value={input}
-              onChange={setInput}
-              onSend={handleSend}
-              isStreaming={isLoading}
-            />
+            {inputBarElement}
           </motion.div>
         )}
       </AnimatePresence>
@@ -150,7 +156,6 @@ interface MessageBubbleProps {
 function MessageBubble({ message, sendMessage, reset, selectedModules }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
-  // Render tool call components inline
   const toolCallUI = useMemo(() => {
     if (!message.toolCalls || message.toolCalls.length === 0) return null;
 
@@ -181,7 +186,7 @@ function MessageBubble({ message, sendMessage, reset, selectedModules }: Message
             key={`code-${i}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="my-2 flex items-center gap-2 rounded-lg border border-border bg-base px-3 py-2 text-xs text-ink-secondary"
+            className="my-2 flex items-center gap-2 rounded-lg bg-accent-light px-3 py-2 text-xs text-ink-secondary"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <rect x="2" y="2" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.2" />
@@ -198,7 +203,7 @@ function MessageBubble({ message, sendMessage, reset, selectedModules }: Message
             key={`deploy-${i}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="my-2 flex items-center gap-2 rounded-lg border border-indigo/20 bg-indigo-light px-3 py-2 text-xs text-indigo"
+            className="my-2 flex items-center gap-2 rounded-lg bg-accent-light px-3 py-2 text-xs text-ink-secondary"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M4 5l3-3 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -220,14 +225,13 @@ function MessageBubble({ message, sendMessage, reset, selectedModules }: Message
         transition={{ duration: 0.2 }}
         className="flex justify-end"
       >
-        <div className="max-w-[85%] rounded-xl bg-indigo-light px-4 py-2.5 text-sm leading-relaxed text-ink">
+        <div className="max-w-[85%] rounded-2xl rounded-br-lg bg-accent-light px-4 py-2.5 text-sm leading-relaxed text-ink">
           <p className="whitespace-pre-wrap">{message.content}</p>
         </div>
       </motion.div>
     );
   }
 
-  // Assistant message
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
@@ -237,7 +241,7 @@ function MessageBubble({ message, sendMessage, reset, selectedModules }: Message
     >
       <div className="max-w-[85%]">
         {message.content && (
-          <div className="rounded-xl border border-border bg-surface px-4 py-2.5 text-sm leading-relaxed">
+          <div className="rounded-2xl rounded-bl-lg border border-border/50 bg-surface px-4 py-2.5 text-sm leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <MarkdownRenderer
               content={message.content}
               isAnimating={message.isStreaming}
@@ -245,13 +249,8 @@ function MessageBubble({ message, sendMessage, reset, selectedModules }: Message
           </div>
         )}
         {toolCallUI}
-        {/* Streaming indicator when no content yet */}
         {message.isStreaming && !message.content && (
-          <div className="flex items-center gap-1.5 py-2">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo" />
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo" style={{ animationDelay: "0.2s" }} />
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo" style={{ animationDelay: "0.4s" }} />
-          </div>
+          <TypingIndicator />
         )}
       </div>
     </motion.div>

@@ -63,47 +63,55 @@ export function DeployFlow() {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-lg border border-border bg-base p-4"
     >
-      <div className="space-y-3">
+      <div className="space-y-0">
         {steps.map((step, i) => {
           const stepIndex = stateOrder[step.state];
           const isActive = stepIndex === currentIndex;
           const isDone = stepIndex < currentIndex;
-          const isPending = stepIndex > currentIndex;
 
           return (
-            <div key={step.state} className="flex items-center gap-3">
-              {/* Status indicator */}
-              <div className="flex h-5 w-5 items-center justify-center">
-                {isDone ? (
-                  <motion.svg
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                  >
-                    <circle cx="8" cy="8" r="7" fill="#059669" />
-                    <path
-                      d="M5 8l2 2 4-4"
-                      stroke="white"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </motion.svg>
-                ) : isActive ? (
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-indigo-soft border-t-indigo" />
-                ) : (
-                  <span className="h-2 w-2 rounded-full bg-border" />
+            <div key={step.state} className="flex items-start gap-3">
+              {/* Indicator column with connecting line */}
+              <div className="flex flex-col items-center">
+                {/* Status indicator */}
+                <div className="flex h-6 w-6 items-center justify-center">
+                  {isDone ? (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-success"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path
+                          d="M3 6l2 2 4-4"
+                          stroke="white"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </motion.div>
+                  ) : isActive ? (
+                    <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-ink/20 border-t-ink" />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-border" />
+                  )}
+                </div>
+                {/* Connecting line */}
+                {i < steps.length - 1 && (
+                  <div
+                    className={`h-4 w-0.5 ${
+                      isDone ? "bg-success/30" : "bg-border"
+                    }`}
+                  />
                 )}
               </div>
 
               {/* Label */}
               <span
-                className={`text-sm ${
+                className={`pt-0.5 text-sm ${
                   isActive
-                    ? "font-medium text-ink"
+                    ? "text-ink font-semibold"
                     : isDone
                       ? "text-success"
                       : "text-ink-tertiary"

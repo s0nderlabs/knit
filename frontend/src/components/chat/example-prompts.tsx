@@ -1,29 +1,26 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 
 const examples = [
   {
-    title: "Fungible Token",
-    description: "ERC-20 with minting, burning, and pausable transfers",
+    label: "ERC-20 Fungible Token",
     prompt:
       "Create an ERC-20 token with minting restricted to the owner, burnable by any holder, and pausable transfers for emergencies.",
   },
   {
-    title: "NFT Collection",
-    description: "ERC-721 with royalties and reveal mechanics",
+    label: "ERC-721 NFT Collection",
     prompt:
       "Build an NFT collection with EIP-2981 royalties, a delayed reveal mechanism, and a max supply cap.",
   },
   {
-    title: "DAO Governance",
-    description: "Governor with timelock and voting token",
+    label: "DAO Governance",
     prompt:
       "Create a DAO governance system with an ERC-20 voting token, Governor contract with proposal threshold, and a timelock controller.",
   },
   {
-    title: "Cross-Chain Bridge",
-    description: "XCM-powered token bridge to parachains",
+    label: "XCM Cross-Chain Bridge",
     prompt:
       "Build a cross-chain token bridge that uses the XCM precompile to send tokens from Polkadot Hub to a parachain.",
   },
@@ -31,49 +28,76 @@ const examples = [
 
 interface ExamplePromptsProps {
   onSelect: (prompt: string) => void;
+  inputBar: ReactNode;
 }
 
-export function ExamplePrompts({ onSelect }: ExamplePromptsProps) {
+export function ExamplePrompts({ onSelect, inputBar }: ExamplePromptsProps) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-5">
+    <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8">
+      {/* Heading */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="mb-8 text-center"
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="text-center"
       >
-        <h2 className="mb-1.5 text-xl font-semibold tracking-tight text-ink">
-          What do you want to build?
-        </h2>
-        <p className="text-sm text-ink-secondary">
-          Describe your contract or pick a starting point
+        <h1 className="font-[family-name:var(--font-display)] text-[clamp(32px,5vw,52px)] leading-[1.1] tracking-tight text-ink">
+          The better way to
+          <br />
+          build smart contracts
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-ink-secondary font-[family-name:var(--font-body)]">
+          Describe what you need in plain English. Knit assembles audited
+          modules into deployable Solidity.
         </p>
       </motion.div>
 
-      <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
-        {examples.map((ex, i) => (
-          <motion.button
-            key={ex.title}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.35,
-              delay: 0.1 + i * 0.06,
-              ease: [0.25, 0.46, 0.45, 0.94],
-            }}
-            onClick={() => onSelect(ex.prompt)}
-            className="group relative rounded-xl border border-border bg-surface p-4 text-left transition-all hover:border-indigo-soft hover:shadow-sm"
-          >
-            {/* Thread accent line */}
-            <div className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full bg-border transition-colors group-hover:bg-indigo" />
+      {/* Centered input bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.1,
+          ease: [0.25, 0.46, 0.45, 0.94],
+        }}
+        className="mt-8 w-full max-w-2xl"
+      >
+        {inputBar}
+      </motion.div>
 
-            <p className="pl-3 text-sm font-medium text-ink">{ex.title}</p>
-            <p className="mt-1 pl-3 text-xs leading-relaxed text-ink-secondary">
-              {ex.description}
-            </p>
-          </motion.button>
+      {/* Template chips */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.2,
+          ease: [0.25, 0.46, 0.45, 0.94],
+        }}
+        className="mt-4 flex flex-wrap items-center justify-center gap-2"
+      >
+        {examples.map((ex) => (
+          <button
+            key={ex.label}
+            onClick={() => onSelect(ex.prompt)}
+            className="rounded-full border border-border/70 px-3 py-1.5 text-[12px] font-medium text-ink-tertiary transition-all hover:border-ink/20 hover:text-ink-secondary"
+          >
+            {ex.label}
+          </button>
         ))}
-      </div>
+      </motion.div>
+
+      {/* Trust line */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+        className="mt-8 text-[11px] text-ink-tertiary font-[family-name:var(--font-body)]"
+      >
+        Powered by OpenZeppelin &middot; Deploys to Polkadot Hub &middot;
+        Audited modules only
+      </motion.p>
     </div>
   );
 }

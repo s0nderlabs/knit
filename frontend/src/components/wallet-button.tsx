@@ -7,7 +7,7 @@ export function WalletButton() {
     return (
       <button
         disabled
-        className="rounded-lg bg-ink/50 px-4 py-1.5 text-sm font-medium text-surface"
+        className="rounded-lg bg-accent-light px-3.5 py-1.5 text-[13px] font-medium text-ink-tertiary"
       >
         Connect
       </button>
@@ -30,9 +30,9 @@ function PrivyWalletInner() {
     return (
       <button
         onClick={() => logout()}
-        className="flex items-center gap-2 rounded-lg border border-border bg-base px-3 py-1.5 font-mono text-xs text-ink-secondary transition-colors hover:border-indigo-soft hover:text-ink"
+        className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 font-mono text-xs text-ink-secondary transition-colors hover:border-ink/20 hover:text-ink"
       >
-        <span className="h-2 w-2 rounded-full bg-success" />
+        <span className="h-1.5 w-1.5 rounded-full bg-success" />
         {truncated}
       </button>
     );
@@ -42,7 +42,7 @@ function PrivyWalletInner() {
     <button
       onClick={() => login()}
       disabled={!ready}
-      className="rounded-lg bg-ink px-4 py-1.5 text-sm font-medium text-surface transition-all hover:bg-ink/90 disabled:opacity-40"
+      className="rounded-lg bg-ink px-3.5 py-1.5 text-[13px] font-medium text-white transition-all hover:bg-ink/85 disabled:opacity-40"
     >
       Connect
     </button>
