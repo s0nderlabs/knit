@@ -26,6 +26,10 @@ interface ChatState {
 
 interface UseChatOptions {
   onToolCall?: (toolCall: ToolCall) => void;
+  onAuditStart?: () => void;
+  onAuditDone?: () => void;
+  onFixStart?: (issueCount: number) => void;
+  onFixDone?: () => void;
 }
 
 export function useChat(options?: UseChatOptions) {
@@ -43,6 +47,10 @@ export function useChat(options?: UseChatOptions) {
   const abortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const onToolCallRef = useRef(options?.onToolCall);
+  const onAuditStartRef = useRef(options?.onAuditStart);
+  const onAuditDoneRef = useRef(options?.onAuditDone);
+  const onFixStartRef = useRef(options?.onFixStart);
+  const onFixDoneRef = useRef(options?.onFixDone);
 
   useEffect(() => {
     sessionIdRef.current = state.sessionId;
@@ -51,6 +59,22 @@ export function useChat(options?: UseChatOptions) {
   useEffect(() => {
     onToolCallRef.current = options?.onToolCall;
   }, [options?.onToolCall]);
+
+  useEffect(() => {
+    onAuditStartRef.current = options?.onAuditStart;
+  }, [options?.onAuditStart]);
+
+  useEffect(() => {
+    onAuditDoneRef.current = options?.onAuditDone;
+  }, [options?.onAuditDone]);
+
+  useEffect(() => {
+    onFixStartRef.current = options?.onFixStart;
+  }, [options?.onFixStart]);
+
+  useEffect(() => {
+    onFixDoneRef.current = options?.onFixDone;
+  }, [options?.onFixDone]);
 
   useEffect(() => {
     return () => {
@@ -136,6 +160,22 @@ export function useChat(options?: UseChatOptions) {
               const tc: ToolCall = { name: data.name, input: data.input || {} };
               toolCallsRef.current = [...toolCallsRef.current, tc];
               onToolCallRef.current?.(tc);
+            }
+
+            if (event === "audit_start") {
+              onAuditStartRef.current?.();
+            }
+
+            if (event === "audit_done") {
+              onAuditDoneRef.current?.();
+            }
+
+            if (event === "fix_start") {
+              onFixStartRef.current?.(data.issueCount || 0);
+            }
+
+            if (event === "fix_done") {
+              onFixDoneRef.current?.();
             }
 
             if (event === "done") {

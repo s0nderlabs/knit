@@ -3,6 +3,14 @@
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import type { Module } from "@/lib/modules/catalog";
 
+export interface AuditFinding {
+  severity: string;
+  title: string;
+  description: string;
+  confidence: number;
+  fix?: string;
+}
+
 export type DeployState =
   | "idle"
   | "compiling"
@@ -61,6 +69,22 @@ interface WorkspaceState {
   setCompiledAbi: (abi: unknown[] | null) => void;
   compiledBytecode: string | null;
   setCompiledBytecode: (bytecode: string | null) => void;
+
+  // Generated test
+  generatedTest: string;
+  setGeneratedTest: (code: string) => void;
+  testName: string;
+  setTestName: (name: string) => void;
+
+  // Active tab in code panel
+  activeCodeTab: "contract" | "test" | "audit";
+  setActiveCodeTab: (tab: "contract" | "test" | "audit") => void;
+
+  // Audit
+  auditFindings: AuditFinding[] | null;
+  setAuditFindings: (findings: AuditFinding[] | null) => void;
+  isAuditing: boolean;
+  setIsAuditing: (v: boolean) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
@@ -77,6 +101,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [deployError, setDeployError] = useState<string | null>(null);
   const [compiledAbi, setCompiledAbi] = useState<unknown[] | null>(null);
   const [compiledBytecode, setCompiledBytecode] = useState<string | null>(null);
+  const [generatedTest, setGeneratedTest] = useState("");
+  const [testName, setTestName] = useState("");
+  const [activeCodeTab, setActiveCodeTab] = useState<"contract" | "test" | "audit">("contract");
+  const [auditFindings, setAuditFindings] = useState<AuditFinding[] | null>(null);
+  const [isAuditing, setIsAuditing] = useState(false);
 
   const addModule = useCallback((module: Module) => {
     setSelectedModules((prev) => {
@@ -119,6 +148,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setCompiledAbi,
       compiledBytecode,
       setCompiledBytecode,
+      generatedTest,
+      setGeneratedTest,
+      testName,
+      setTestName,
+      activeCodeTab,
+      setActiveCodeTab,
+      auditFindings,
+      setAuditFindings,
+      isAuditing,
+      setIsAuditing,
     }),
     [
       codePanelOpen,
@@ -135,6 +174,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       deployError,
       compiledAbi,
       compiledBytecode,
+      generatedTest,
+      testName,
+      activeCodeTab,
+      auditFindings,
+      isAuditing,
     ],
   );
 

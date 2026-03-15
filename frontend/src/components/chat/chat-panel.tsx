@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useWorkspace } from "@/contexts/workspace-context";
+import { useWorkspace, type AuditFinding } from "@/contexts/workspace-context";
 import { useChat, type Message } from "@/hooks/use-chat";
 import { InputBar } from "./input-bar";
 import { ExamplePrompts } from "./example-prompts";
@@ -14,11 +14,19 @@ import { TypingIndicator } from "./typing-indicator";
 export function ChatPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
+  const [isFixing, setIsFixing] = useState(false);
+  const [fixCount, setFixCount] = useState(0);
   const {
     setCodePanelOpen,
     setGeneratedCode,
     setContractName,
     selectedModules,
+    setGeneratedTest,
+    setTestName,
+    setActiveCodeTab,
+    setAuditFindings,
+    setIsAuditing,
+    isAuditing,
   } = useWorkspace();
 
   const { messages, isLoading, error, sendMessage, reset } = useChat({
@@ -27,8 +35,22 @@ export function ChatPanel() {
         setGeneratedCode(tc.input.code as string);
         setContractName((tc.input.contractName as string) || "Contract");
         setCodePanelOpen(true);
+        setActiveCodeTab("contract");
+      }
+      if (tc.name === "generate_test" && tc.input.testCode) {
+        setGeneratedTest(tc.input.testCode as string);
+        setTestName((tc.input.contractName as string) || "Contract");
+        setActiveCodeTab("test");
+      }
+      if (tc.name === "audit_result" && tc.input.findings) {
+        setAuditFindings(tc.input.findings as AuditFinding[]);
+        setIsAuditing(false);
       }
     },
+    onAuditStart: () => { setIsAuditing(true); setIsFixing(false); },
+    onAuditDone: () => setIsAuditing(false),
+    onFixStart: (count) => { setIsFixing(true); setFixCount(count); setIsAuditing(false); },
+    onFixDone: () => setIsFixing(false),
   });
 
   useEffect(() => {
@@ -97,6 +119,25 @@ export function ChatPanel() {
               selectedModules={selectedModules}
             />
           ))}
+
+          {(isAuditing || isFixing) && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <div className="flex items-center gap-2 py-2">
+                <span className="text-base text-ink-secondary animate-pulse">
+                  {isFixing ? "\u2692" : "\u{1f6e1}"}
+                </span>
+                <span className="text-sm text-ink-secondary">
+                  {isFixing
+                    ? `Fixing ${fixCount} issue${fixCount !== 1 ? "s" : ""}...`
+                    : "Running security audit..."}
+                </span>
+              </div>
+            </motion.div>
+          )}
 
           {error && (
             <motion.div
@@ -193,6 +234,45 @@ function MessageBubble({ message, sendMessage, reset, selectedModules }: Message
               <path d="M5 5.5l1.5 1.5L5 8.5M8 8.5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Code generated — see panel
+          </motion.div>
+        );
+      }
+
+      if (tc.name === "generate_test") {
+        return (
+          <motion.div
+            key={`test-${i}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="my-2 flex items-center gap-2 rounded-lg bg-success-light px-3 py-2 text-xs text-success"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 7l3 3 5-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Test generated — see panel
+          </motion.div>
+        );
+      }
+
+      if (tc.name === "audit_result") {
+        const findings = tc.input.findings as any[];
+        const critCount = findings?.filter((f: any) => f.severity === "Critical" || f.severity === "High").length || 0;
+        return (
+          <motion.div
+            key={`audit-${i}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`my-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+              critCount > 0
+                ? "bg-error-light text-error"
+                : "bg-success-light text-success"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1.5l5.5 3v5L7 12.5 1.5 9.5v-5L7 1.5z" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M5 7l2 2 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Audit complete — {findings?.length || 0} finding{(findings?.length || 0) !== 1 ? "s" : ""}
           </motion.div>
         );
       }

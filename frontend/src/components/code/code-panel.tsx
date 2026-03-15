@@ -49,6 +49,11 @@ export function CodePanel() {
     setDeployResult,
     selectedModules,
     selectedChainId,
+    generatedTest,
+    testName,
+    activeCodeTab,
+    setActiveCodeTab,
+    auditFindings,
   } = useWorkspace();
 
   const handleCompile = useCallback(async () => {
@@ -167,45 +172,65 @@ export function CodePanel() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    className="text-ink-tertiary"
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveCodeTab("contract")}
+                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-xs transition-colors ${
+                      activeCodeTab === "contract"
+                        ? "bg-accent-light font-semibold text-ink"
+                        : "text-ink-tertiary hover:text-ink-secondary"
+                    }`}
                   >
-                    <rect
-                      x="2"
-                      y="2"
-                      width="10"
-                      height="10"
-                      rx="2"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                    />
-                    <path
-                      d="M5 5.5l1.5 1.5L5 8.5M8 8.5h2"
-                      stroke="currentColor"
-                      strokeWidth="1.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-accent"><path d="M7 1L12 4V10L7 13L2 10V4L7 1Z" stroke="currentColor" strokeWidth="1.2"/></svg>
-                  <span className="font-mono text-xs font-semibold text-ink">
                     {contractName || "Contract"}.sol
-                  </span>
+                  </button>
+                  {generatedTest && (
+                    <button
+                      onClick={() => setActiveCodeTab("test")}
+                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-xs transition-colors ${
+                        activeCodeTab === "test"
+                          ? "bg-success-light font-semibold text-success"
+                          : "text-ink-tertiary hover:text-ink-secondary"
+                      }`}
+                    >
+                      {testName || "Contract"}.t.sol
+                    </button>
+                  )}
+                  {auditFindings && (
+                    <button
+                      onClick={() => setActiveCodeTab("audit")}
+                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors ${
+                        activeCodeTab === "audit"
+                          ? "bg-accent-light font-semibold text-ink"
+                          : "text-ink-tertiary hover:text-ink-secondary"
+                      }`}
+                    >
+                      Audit
+                      {auditFindings.length > 0 && (
+                        <span className="rounded-full bg-ink px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                          {auditFindings.length}
+                        </span>
+                      )}
+                    </button>
+                  )}
                 </div>
                 <ChainSelector />
               </div>
 
               <div className="flex items-center gap-2">
                 {/* Compile button */}
+                {activeCodeTab === "test" && generatedTest && (
+                  <button
+                    onClick={() => navigator.clipboard.writeText(generatedTest)}
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-ink-secondary hover:text-ink"
+                  >
+                    Copy
+                  </button>
+                )}
                 <button
                   onClick={handleCompile}
                   disabled={
                     !generatedCode ||
+                    activeCodeTab !== "contract" ||
                     deployState === "compiling" ||
                     deployState === "deploying"
                   }
@@ -283,12 +308,64 @@ export function CodePanel() {
                 <div className="flex-1 overflow-y-auto p-4">
                   <DeployFlow />
                 </div>
+              ) : activeCodeTab === "audit" && auditFindings ? (
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="space-y-3">
+                    {auditFindings.length === 0 ? (
+                      <div className="rounded-xl border border-success/20 bg-success-light p-4 text-center">
+                        <p className="text-sm font-medium text-success">No vulnerabilities found</p>
+                        <p className="mt-1 text-xs text-ink-tertiary">The contract passed all security checks.</p>
+                      </div>
+                    ) : (
+                      auditFindings.map((finding, i) => {
+                        const severityColors: Record<string, string> = {
+                          Critical: "border-error/30 bg-error-light",
+                          High: "border-warning/30 bg-warning-light",
+                          Medium: "border-border bg-accent-light",
+                          Low: "border-border bg-surface",
+                        };
+                        const badgeColors: Record<string, string> = {
+                          Critical: "bg-error text-white",
+                          High: "bg-warning text-white",
+                          Medium: "bg-ink-tertiary text-white",
+                          Low: "bg-border text-ink-secondary",
+                        };
+                        return (
+                          <div
+                            key={i}
+                            className={`rounded-xl border p-4 ${severityColors[finding.severity] || "border-border bg-surface"}`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold ${badgeColors[finding.severity] || "bg-border text-ink"}`}>
+                                {finding.severity}
+                              </span>
+                              <span className="text-xs text-ink-tertiary">
+                                {finding.confidence}% confidence
+                              </span>
+                            </div>
+                            <p className="text-sm font-semibold text-ink">{finding.title}</p>
+                            <p className="mt-1 text-xs text-ink-secondary leading-relaxed">{finding.description}</p>
+                            {finding.fix && (
+                              <div className="mt-2 rounded-lg bg-surface border border-border p-2">
+                                <p className="text-[10px] font-semibold text-ink-tertiary uppercase mb-1">Suggested Fix</p>
+                                <p className="text-xs text-ink-secondary">{finding.fix}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
               ) : (
                 <Editor
                   height="100%"
                   language="sol"
-                  value={generatedCode}
-                  onChange={(v) => setGeneratedCode(v || "")}
+                  value={activeCodeTab === "test" ? generatedTest : generatedCode}
+                  onChange={(v) => {
+                    if (activeCodeTab === "contract") setGeneratedCode(v || "");
+                  }}
+                  key={activeCodeTab}
                   theme="vs"
                   options={{
                     fontFamily: "var(--font-mono), JetBrains Mono, monospace",
@@ -306,6 +383,7 @@ export function CodePanel() {
                       horizontalScrollbarSize: 6,
                     },
                     wordWrap: "on",
+                    readOnly: activeCodeTab === "test",
                   }}
                 />
               )}

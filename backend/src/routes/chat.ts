@@ -3,6 +3,7 @@ import { z } from "zod";
 import { query, tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import type { AppContext } from "../types";
 import { KNIT_SYSTEM_PROMPT } from "../prompts/system";
+import { AUDITOR_SYSTEM_PROMPT } from "../prompts/auditor";
 
 const chat = new Hono<AppContext>();
 
@@ -12,16 +13,183 @@ const ChatBody = z.object({
   modules: z.array(z.string()).default([]),
 });
 
+interface AuditFinding {
+  severity: string;
+  title: string;
+  description: string;
+  confidence: number;
+  fix?: string;
+}
+
+interface AuditResult {
+  findings: AuditFinding[];
+  chunks: string[];
+}
+
+/**
+ * Run the auditor agent. Returns findings + SSE chunks to yield.
+ */
+async function runAuditor(contractCode: string, contractName: string, generateTests: boolean): Promise<AuditResult> {
+  const toolResponse = (data: unknown) => ({
+    content: [{ type: "text" as const, text: JSON.stringify(data) }],
+  });
+
+  const auditorTools = [
+    tool(
+      "audit_result",
+      "Report security audit findings for the contract",
+      {
+        findings: z.array(z.object({
+          severity: z.enum(["Critical", "High", "Medium", "Low"]),
+          title: z.string(),
+          description: z.string(),
+          confidence: z.number(),
+          fix: z.string().optional(),
+        })),
+      },
+      async (args: any) => toolResponse({ status: "audit_complete", count: args.findings?.length }),
+    ),
+    tool(
+      "generate_test",
+      "Generate a comprehensive Foundry test file for the contract",
+      {
+        contractName: z.string().describe("The contract being tested"),
+        testCode: z.string().describe("Complete Foundry test file source code"),
+      },
+      async (args: any) => toolResponse({ status: "test_generated", contractName: args.contractName }),
+    ),
+  ];
+
+  const server = createSdkMcpServer({ name: "knit-auditor", tools: auditorTools });
+
+  const testInstruction = generateTests
+    ? "\n\nCall audit_result first with findings, then call generate_test with the complete test file."
+    : "\n\nCall audit_result with your findings. Do NOT generate tests this round.";
+
+  const prompt = `Audit this Solidity contract.
+
+Contract: ${contractName}
+
+\`\`\`solidity
+${contractCode}
+\`\`\`${testInstruction}`;
+
+  const chunks: string[] = [];
+  let findings: AuditFinding[] = [];
+
+  for await (const msg of query({
+    prompt,
+    options: {
+      model: "claude-sonnet-4-6",
+      systemPrompt: AUDITOR_SYSTEM_PROMPT,
+      mcpServers: { "knit-auditor": server },
+      maxTurns: 5,
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+    } as any,
+  })) {
+    const m = msg as any;
+
+    if (m.type === "assistant" && m.message?.content) {
+      for (const block of m.message.content) {
+        if (block.type === "tool_use" && block.name?.includes("knit-auditor")) {
+          const toolName = block.name.replace("mcp__knit-auditor__", "");
+          chunks.push(`event: tool_call\ndata: ${JSON.stringify({ name: toolName, input: block.input })}\n\n`);
+
+          if (toolName === "audit_result" && block.input?.findings) {
+            findings = block.input.findings as AuditFinding[];
+          }
+        }
+      }
+    }
+  }
+
+  return { findings, chunks };
+}
+
+/**
+ * Run the fixer agent — takes code + findings, returns fixed code.
+ */
+async function runFixer(contractCode: string, contractName: string, findings: AuditFinding[]): Promise<{ fixedCode: string; chunks: string[] }> {
+  const toolResponse = (data: unknown) => ({
+    content: [{ type: "text" as const, text: JSON.stringify(data) }],
+  });
+
+  const fixerTools = [
+    tool(
+      "generate_code",
+      "Emit the fixed Solidity contract code",
+      {
+        contractName: z.string(),
+        filename: z.string(),
+        code: z.string(),
+      },
+      async (args: any) => toolResponse({ status: "code_fixed", contractName: args.contractName }),
+    ),
+  ];
+
+  const server = createSdkMcpServer({ name: "knit-fixer", tools: fixerTools });
+
+  const findingsText = findings
+    .filter((f) => f.confidence >= 75)
+    .map((f, i) => `${i + 1}. [${f.severity}] ${f.title}: ${f.description}${f.fix ? ` Fix: ${f.fix}` : ""}`)
+    .join("\n");
+
+  const prompt = `Fix the following security issues in this Solidity contract. Preserve ALL existing functionality. Only fix the issues listed.
+
+Contract: ${contractName}
+
+\`\`\`solidity
+${contractCode}
+\`\`\`
+
+Security issues to fix:
+${findingsText}
+
+Call generate_code with the COMPLETE fixed contract. Do not omit any existing code.`;
+
+  const chunks: string[] = [];
+  let fixedCode = "";
+
+  for await (const msg of query({
+    prompt,
+    options: {
+      model: "claude-sonnet-4-6",
+      systemPrompt: "You are a Solidity developer fixing security issues. Output the complete fixed contract using the generate_code tool. Preserve all existing functionality.",
+      mcpServers: { "knit-fixer": server },
+      maxTurns: 3,
+      permissionMode: "bypassPermissions",
+      allowDangerouslySkipPermissions: true,
+    } as any,
+  })) {
+    const m = msg as any;
+
+    if (m.type === "assistant" && m.message?.content) {
+      for (const block of m.message.content) {
+        if (block.type === "tool_use" && block.name?.includes("knit-fixer")) {
+          const toolName = block.name.replace("mcp__knit-fixer__", "");
+          chunks.push(`event: tool_call\ndata: ${JSON.stringify({ name: toolName, input: block.input })}\n\n`);
+
+          if (toolName === "generate_code" && block.input?.code) {
+            fixedCode = block.input.code as string;
+          }
+        }
+      }
+    }
+  }
+
+  return { fixedCode, chunks };
+}
+
 /**
  * Streams chat responses as SSE-formatted strings.
- * Follows the exact sigil pattern: AsyncGenerator + ReadableStream.
+ * After generate_code, automatically spawns the auditor agent.
  */
 async function* streamChat(params: {
   userMessage: string;
   sessionId?: string | null;
   modules: string[];
 }): AsyncGenerator<string> {
-  // Tool handlers return MCP content format (same as sigil)
   const toolResponse = (data: unknown) => ({
     content: [{ type: "text" as const, text: JSON.stringify(data) }],
   });
@@ -118,6 +286,8 @@ async function* streamChat(params: {
 
   let sessionId = params.sessionId || "";
   let fullText = "";
+  let generatedCode = "";
+  let generatedContractName = "";
 
   for await (const msg of query({
     prompt: params.userMessage,
@@ -125,13 +295,11 @@ async function* streamChat(params: {
   })) {
     const m = msg as any;
 
-    // Session init
     if (m.type === "system" && m.subtype === "init") {
       sessionId = m.session_id;
       yield `event: session\ndata: ${JSON.stringify({ sessionId })}\n\n`;
     }
 
-    // Stream events — text deltas (real-time streaming like sigil)
     if (m.type === "stream_event" && m.parent_tool_use_id === null) {
       const evt = m.event;
       if (
@@ -144,7 +312,6 @@ async function* streamChat(params: {
       }
     }
 
-    // Assistant messages — extract tool calls to forward to frontend
     if (m.type === "assistant" && m.message?.content) {
       for (const block of m.message.content) {
         if (
@@ -153,19 +320,98 @@ async function* streamChat(params: {
         ) {
           const toolName = block.name.replace("mcp__knit-tools__", "");
           yield `event: tool_call\ndata: ${JSON.stringify({ name: toolName, input: block.input })}\n\n`;
+
+          // Capture generated code for the auditor
+          if (toolName === "generate_code" && block.input?.code) {
+            generatedCode = block.input.code;
+            generatedContractName = block.input.contractName || "Contract";
+          }
         }
       }
     }
 
-    // Final result
     if (m.type === "result") {
       const resultText = m.result || fullText;
       yield `event: done\ndata: ${JSON.stringify({ result: resultText, sessionId })}\n\n`;
     }
   }
+
+  // After builder completes, run the audit-fix loop
+  if (generatedCode) {
+    const MAX_ITERATIONS = 3;
+    let currentCode = generatedCode;
+    let iteration = 0;
+
+    try {
+      while (iteration < MAX_ITERATIONS) {
+        iteration++;
+        const isLastIteration = iteration === MAX_ITERATIONS;
+        const isFirstIteration = iteration === 1;
+
+        // Run auditor (only generate tests on the final pass)
+        yield `event: audit_start\ndata: ${JSON.stringify({ contractName: generatedContractName, iteration })}\n\n`;
+
+        const audit = await runAuditor(currentCode, generatedContractName, false);
+
+        // Yield audit chunks (findings)
+        for (const chunk of audit.chunks) {
+          yield chunk;
+        }
+
+        // Filter actionable findings (confidence >= 75, not Low)
+        const actionable = audit.findings.filter(
+          (f) => f.confidence >= 75 && f.severity !== "Low",
+        );
+
+        yield `event: audit_done\ndata: ${JSON.stringify({ status: "complete", iteration, actionableCount: actionable.length, totalCount: audit.findings.length })}\n\n`;
+
+        // If no actionable findings or last iteration, generate tests and stop
+        if (actionable.length === 0 || isLastIteration) {
+          // Generate tests on the final clean code
+          yield `event: audit_start\ndata: ${JSON.stringify({ contractName: generatedContractName, phase: "testing" })}\n\n`;
+
+          const finalAudit = await runAuditor(currentCode, generatedContractName, true);
+          for (const chunk of finalAudit.chunks) {
+            yield chunk;
+          }
+
+          yield `event: audit_done\ndata: ${JSON.stringify({ status: "complete", phase: "testing" })}\n\n`;
+          break;
+        }
+
+        // Fix the code
+        yield `event: fix_start\ndata: ${JSON.stringify({ contractName: generatedContractName, iteration, issueCount: actionable.length })}\n\n`;
+
+        const fix = await runFixer(currentCode, generatedContractName, actionable);
+
+        for (const chunk of fix.chunks) {
+          yield chunk;
+        }
+
+        if (fix.fixedCode) {
+          currentCode = fix.fixedCode;
+          yield `event: fix_done\ndata: ${JSON.stringify({ iteration })}\n\n`;
+        } else {
+          // Fixer failed to produce code, stop looping
+          yield `event: fix_done\ndata: ${JSON.stringify({ iteration, error: "Fixer did not produce code" })}\n\n`;
+
+          // Still generate tests on whatever we have
+          const fallbackAudit = await runAuditor(currentCode, generatedContractName, true);
+          for (const chunk of fallbackAudit.chunks) {
+            yield chunk;
+          }
+          break;
+        }
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Audit loop failed";
+      console.error("Audit loop error:", errorMsg);
+      yield `event: audit_done\ndata: ${JSON.stringify({ status: "error", error: errorMsg })}\n\n`;
+    }
+  }
 }
 
-// POST /api/chat — SSE streaming (sigil pattern: ReadableStream from AsyncGenerator)
+// POST /api/chat — SSE streaming
 chat.post("/api/chat", async (c) => {
   const body = await c.req.json();
   const parsed = ChatBody.safeParse(body);

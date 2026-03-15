@@ -64,35 +64,43 @@ function resolveRelativePath(from: string, rel: string): string {
   return parts.join("/");
 }
 
-export async function compileEvm(
+/**
+ * Resolve all @openzeppelin imports recursively.
+ * Shared by both compileEvm and compilePvm.
+ */
+async function resolveAllImports(
   sources: Record<string, string>,
-  contractName: string
-): Promise<CompileResponse> {
-  // Collect all imports recursively
+): Promise<Record<string, string>> {
   const resolvedSources: Record<string, string> = { ...sources };
   const importCallback = createImportCallback();
 
-  async function resolveImports(source: string, parentPath?: string) {
+  async function walk(source: string, parentPath?: string) {
     const importRegex = /import\s+.*?["']([^"']+)["']/g;
     let match: RegExpExecArray | null;
     while ((match = importRegex.exec(source)) !== null) {
       let importPath = match[1];
-      // Resolve relative imports against parent file path
       if ((importPath.startsWith("./") || importPath.startsWith("../")) && parentPath) {
         importPath = resolveRelativePath(parentPath, importPath);
       }
       if (!resolvedSources[importPath]) {
         const contents = await importCallback.resolve(importPath);
         resolvedSources[importPath] = contents;
-        await resolveImports(contents, importPath);
+        await walk(contents, importPath);
       }
     }
   }
 
-  // Resolve all imports from user sources
   for (const src of Object.values(sources)) {
-    await resolveImports(src);
+    await walk(src);
   }
+  return resolvedSources;
+}
+
+export async function compileEvm(
+  sources: Record<string, string>,
+  contractName: string
+): Promise<CompileResponse> {
+  const resolvedSources = await resolveAllImports(sources);
 
   const input = {
     language: "Solidity",
@@ -178,11 +186,12 @@ export async function compilePvm(
 ): Promise<CompileResponse> {
   try {
     const { compile } = await import("@parity/resolc");
+    const resolvedSources = await resolveAllImports(sources);
 
     const input = {
       language: "Solidity",
       sources: Object.fromEntries(
-        Object.entries(sources).map(([name, content]) => [
+        Object.entries(resolvedSources).map(([name, content]) => [
           name,
           { content },
         ])
