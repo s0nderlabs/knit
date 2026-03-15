@@ -4,6 +4,7 @@ import { query, tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk"
 import type { AppContext } from "../types";
 import { KNIT_SYSTEM_PROMPT } from "../prompts/system";
 import { AUDITOR_SYSTEM_PROMPT } from "../prompts/auditor";
+import { runTests } from "../services/test-runner";
 
 const chat = new Hono<AppContext>();
 
@@ -24,6 +25,7 @@ interface AuditFinding {
 interface AuditResult {
   findings: AuditFinding[];
   chunks: string[];
+  testCode: string;
 }
 
 /**
@@ -76,6 +78,7 @@ ${contractCode}
 
   const chunks: string[] = [];
   let findings: AuditFinding[] = [];
+  let testCode = "";
 
   for await (const msg of query({
     prompt,
@@ -99,12 +102,15 @@ ${contractCode}
           if (toolName === "audit_result" && block.input?.findings) {
             findings = block.input.findings as AuditFinding[];
           }
+          if (toolName === "generate_test" && block.input?.testCode) {
+            testCode = block.input.testCode as string;
+          }
         }
       }
     }
   }
 
-  return { findings, chunks };
+  return { findings, chunks, testCode };
 }
 
 /**
@@ -376,6 +382,20 @@ async function* streamChat(params: {
           }
 
           yield `event: audit_done\ndata: ${JSON.stringify({ status: "complete", phase: "testing" })}\n\n`;
+
+          // Run tests if test code was generated
+          if (finalAudit.testCode) {
+            yield `event: test_start\ndata: ${JSON.stringify({ contractName: generatedContractName })}\n\n`;
+            try {
+              const testRun = await runTests(currentCode, finalAudit.testCode, generatedContractName);
+              for (const result of testRun.results) {
+                yield `event: test_result\ndata: ${JSON.stringify(result)}\n\n`;
+              }
+              yield `event: test_done\ndata: ${JSON.stringify({ passed: testRun.passed, failed: testRun.failed, total: testRun.total, coverage: testRun.coverage })}\n\n`;
+            } catch (err) {
+              yield `event: test_done\ndata: ${JSON.stringify({ passed: 0, failed: 0, total: 0, error: err instanceof Error ? err.message : "Test execution failed" })}\n\n`;
+            }
+          }
           break;
         }
 
@@ -399,6 +419,19 @@ async function* streamChat(params: {
           const fallbackAudit = await runAuditor(currentCode, generatedContractName, true);
           for (const chunk of fallbackAudit.chunks) {
             yield chunk;
+          }
+          // Run tests on fallback
+          if (fallbackAudit.testCode) {
+            yield `event: test_start\ndata: ${JSON.stringify({ contractName: generatedContractName })}\n\n`;
+            try {
+              const testRun = await runTests(currentCode, fallbackAudit.testCode, generatedContractName);
+              for (const result of testRun.results) {
+                yield `event: test_result\ndata: ${JSON.stringify(result)}\n\n`;
+              }
+              yield `event: test_done\ndata: ${JSON.stringify({ passed: testRun.passed, failed: testRun.failed, total: testRun.total, coverage: testRun.coverage })}\n\n`;
+            } catch (err) {
+              yield `event: test_done\ndata: ${JSON.stringify({ passed: 0, failed: 0, total: 0, error: err instanceof Error ? err.message : "Test execution failed" })}\n\n`;
+            }
           }
           break;
         }

@@ -54,6 +54,11 @@ export function CodePanel() {
     activeCodeTab,
     setActiveCodeTab,
     auditFindings,
+    testResults,
+    setTestResults,
+    testSummary,
+    setTestSummary,
+    isTestRunning,
   } = useWorkspace();
 
   const handleCompile = useCallback(async () => {
@@ -356,6 +361,90 @@ export function CodePanel() {
                       })
                     )}
                   </div>
+                </div>
+              ) : activeCodeTab === "test" && (testResults.length > 0 || testSummary) ? (
+                <div className="flex-1 overflow-y-auto p-4">
+                  {/* Test results list */}
+                  <div className="space-y-1.5">
+                    {testResults.map((result, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                          result.status === "pass"
+                            ? "bg-success-light text-success"
+                            : result.status === "fail"
+                              ? "bg-error-light text-error"
+                              : "bg-accent-light text-ink-tertiary"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {result.status === "pass" ? (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                              <path d="M3 7l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : result.status === "fail" ? (
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                              <path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                          ) : (
+                            <span className="text-xs">&#x23ED;</span>
+                          )}
+                          <span className="font-mono text-xs">{result.name}</span>
+                        </div>
+                        <span className="text-[10px] font-mono opacity-60">{result.duration}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary bar */}
+                  {testSummary && (
+                    <div className="mt-4 rounded-xl border border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-lg font-semibold ${testSummary.failed > 0 ? "text-error" : "text-success"}`}>
+                            {testSummary.passed}/{testSummary.total} passing
+                          </span>
+                          {testSummary.failed > 0 && (
+                            <span className="text-sm text-error">{testSummary.failed} failed</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Coverage table */}
+                      {testSummary.coverage && testSummary.coverage.length > 0 && (
+                        <div className="mt-3 border-t border-border pt-3">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">Coverage</p>
+                          <div className="grid grid-cols-4 gap-3">
+                            {["Lines", "Statements", "Branches", "Functions"].map((label, i) => {
+                              const cov = testSummary.coverage[0];
+                              const values = [cov?.lines, cov?.statements, cov?.branches, cov?.functions];
+                              const val = values[i] || "\u2014";
+                              const pct = parseFloat(val);
+                              const color = pct >= 90 ? "text-success" : pct >= 70 ? "text-warning" : pct >= 0 ? "text-error" : "text-ink-tertiary";
+                              return (
+                                <div key={label} className="text-center">
+                                  <p className={`text-lg font-semibold ${color}`}>{val.split("(")[0].trim() || "\u2014"}</p>
+                                  <p className="text-[10px] text-ink-tertiary">{label}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {testSummary.error && (
+                        <p className="mt-2 text-xs text-error">{testSummary.error}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* View source link */}
+                  <button
+                    onClick={() => { setTestResults([]); setTestSummary(null); }}
+                    className="mt-3 text-xs text-ink-tertiary hover:text-ink-secondary"
+                  >
+                    View test source &rarr;
+                  </button>
                 </div>
               ) : (
                 <Editor

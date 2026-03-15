@@ -11,6 +11,29 @@ export interface AuditFinding {
   fix?: string;
 }
 
+export interface TestResult {
+  name: string;
+  status: "pass" | "fail" | "skip";
+  duration: string;
+  reason?: string;
+}
+
+export interface TestCoverage {
+  file: string;
+  lines: string;
+  statements: string;
+  branches: string;
+  functions: string;
+}
+
+export interface TestSummary {
+  passed: number;
+  failed: number;
+  total: number;
+  coverage: TestCoverage[];
+  error?: string;
+}
+
 export type DeployState =
   | "idle"
   | "compiling"
@@ -85,6 +108,14 @@ interface WorkspaceState {
   setAuditFindings: (findings: AuditFinding[] | null) => void;
   isAuditing: boolean;
   setIsAuditing: (v: boolean) => void;
+
+  // Test execution
+  testResults: TestResult[];
+  setTestResults: (r: TestResult[] | ((prev: TestResult[]) => TestResult[])) => void;
+  testSummary: TestSummary | null;
+  setTestSummary: (s: TestSummary | null) => void;
+  isTestRunning: boolean;
+  setIsTestRunning: (v: boolean) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
@@ -106,6 +137,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [activeCodeTab, setActiveCodeTab] = useState<"contract" | "test" | "audit">("contract");
   const [auditFindings, setAuditFindings] = useState<AuditFinding[] | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [testSummary, setTestSummary] = useState<TestSummary | null>(null);
+  const [isTestRunning, setIsTestRunning] = useState(false);
 
   const addModule = useCallback((module: Module) => {
     setSelectedModules((prev) => {
@@ -158,6 +192,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setAuditFindings,
       isAuditing,
       setIsAuditing,
+      testResults,
+      setTestResults,
+      testSummary,
+      setTestSummary,
+      isTestRunning,
+      setIsTestRunning,
     }),
     [
       codePanelOpen,
@@ -179,6 +219,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       activeCodeTab,
       auditFindings,
       isAuditing,
+      testResults,
+      testSummary,
+      isTestRunning,
     ],
   );
 

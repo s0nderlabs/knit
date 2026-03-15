@@ -30,6 +30,9 @@ interface UseChatOptions {
   onAuditDone?: () => void;
   onFixStart?: (issueCount: number) => void;
   onFixDone?: () => void;
+  onTestStart?: () => void;
+  onTestResult?: (result: any) => void;
+  onTestDone?: (summary: any) => void;
 }
 
 export function useChat(options?: UseChatOptions) {
@@ -51,6 +54,9 @@ export function useChat(options?: UseChatOptions) {
   const onAuditDoneRef = useRef(options?.onAuditDone);
   const onFixStartRef = useRef(options?.onFixStart);
   const onFixDoneRef = useRef(options?.onFixDone);
+  const onTestStartRef = useRef(options?.onTestStart);
+  const onTestResultRef = useRef(options?.onTestResult);
+  const onTestDoneRef = useRef(options?.onTestDone);
 
   useEffect(() => {
     sessionIdRef.current = state.sessionId;
@@ -75,6 +81,18 @@ export function useChat(options?: UseChatOptions) {
   useEffect(() => {
     onFixDoneRef.current = options?.onFixDone;
   }, [options?.onFixDone]);
+
+  useEffect(() => {
+    onTestStartRef.current = options?.onTestStart;
+  }, [options?.onTestStart]);
+
+  useEffect(() => {
+    onTestResultRef.current = options?.onTestResult;
+  }, [options?.onTestResult]);
+
+  useEffect(() => {
+    onTestDoneRef.current = options?.onTestDone;
+  }, [options?.onTestDone]);
 
   useEffect(() => {
     return () => {
@@ -176,6 +194,18 @@ export function useChat(options?: UseChatOptions) {
 
             if (event === "fix_done") {
               onFixDoneRef.current?.();
+            }
+
+            if (event === "test_start") {
+              onTestStartRef.current?.();
+            }
+
+            if (event === "test_result") {
+              onTestResultRef.current?.(data);
+            }
+
+            if (event === "test_done") {
+              onTestDoneRef.current?.(data);
             }
 
             if (event === "done") {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useWorkspace, type AuditFinding } from "@/contexts/workspace-context";
+import { useWorkspace, type AuditFinding, type TestResult, type TestSummary } from "@/contexts/workspace-context";
 import { useChat, type Message } from "@/hooks/use-chat";
 import { InputBar } from "./input-bar";
 import { ExamplePrompts } from "./example-prompts";
@@ -27,6 +27,12 @@ export function ChatPanel() {
     setAuditFindings,
     setIsAuditing,
     isAuditing,
+    testResults,
+    setTestResults,
+    testSummary,
+    setTestSummary,
+    isTestRunning,
+    setIsTestRunning,
   } = useWorkspace();
 
   const { messages, isLoading, error, sendMessage, reset } = useChat({
@@ -51,6 +57,9 @@ export function ChatPanel() {
     onAuditDone: () => setIsAuditing(false),
     onFixStart: (count) => { setIsFixing(true); setFixCount(count); setIsAuditing(false); },
     onFixDone: () => setIsFixing(false),
+    onTestStart: () => { setIsTestRunning(true); setTestResults([]); setTestSummary(null); },
+    onTestResult: (result) => setTestResults((prev) => [...prev, result]),
+    onTestDone: (summary) => { setTestSummary(summary); setIsTestRunning(false); },
   });
 
   useEffect(() => {
@@ -134,6 +143,21 @@ export function ChatPanel() {
                   {isFixing
                     ? `Fixing ${fixCount} issue${fixCount !== 1 ? "s" : ""}...`
                     : "Running security audit..."}
+                </span>
+              </div>
+            </motion.div>
+          )}
+
+          {isTestRunning && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <div className="flex items-center gap-2 py-2">
+                <span className="text-base text-ink-secondary animate-pulse">&#x26A1;</span>
+                <span className="text-sm text-ink-secondary">
+                  Running tests... {testResults.filter(r => r.status === "pass").length}/{testResults.length} passing
                 </span>
               </div>
             </motion.div>
