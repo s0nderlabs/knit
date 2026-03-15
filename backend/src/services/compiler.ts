@@ -185,29 +185,21 @@ export async function compilePvm(
   contractName: string
 ): Promise<CompileResponse> {
   try {
-    const { compile } = await import("@parity/resolc");
+    const resolc = await import("@parity/resolc");
     const resolvedSources = await resolveAllImports(sources);
 
-    const input = {
-      language: "Solidity",
-      sources: Object.fromEntries(
-        Object.entries(resolvedSources).map(([name, content]) => [
-          name,
-          { content },
-        ])
-      ),
-      settings: {
-        outputSelection: {
-          "*": {
-            "*": ["abi", "evm.bytecode.object"],
-          },
-        },
-        optimizer: { enabled: true, runs: 200 },
-      },
-    };
+    // resolc compile() expects sources as { "file.sol": { content: "..." } }
+    // and returns an object (not JSON string)
+    const sourcesForResolc = Object.fromEntries(
+      Object.entries(resolvedSources).map(([name, content]) => [
+        name,
+        { content },
+      ]),
+    );
 
-    const output = await compile(JSON.stringify(input));
-    const parsed = JSON.parse(output);
+    const parsed = await resolc.compile(sourcesForResolc, {
+      optimizer: { enabled: true, runs: 200, mode: "z" },
+    });
 
     const errors =
       parsed.errors?.filter((e: any) => e.severity === "error") || [];
@@ -229,18 +221,16 @@ export async function compilePvm(
     }
 
     let abi: any[] | undefined;
-    let pvmBlob: string | undefined;
 
     for (const [, fileOutput] of Object.entries(parsed.contracts || {})) {
       const contractOutput = (fileOutput as any)[contractName];
       if (contractOutput) {
         abi = contractOutput.abi;
-        pvmBlob = `0x${contractOutput.evm?.bytecode?.object || ""}`;
         break;
       }
     }
 
-    if (!abi || !pvmBlob) {
+    if (!abi) {
       return {
         success: false,
         errors: [
@@ -252,10 +242,11 @@ export async function compilePvm(
       };
     }
 
+    // PVM compilation produces ABI. Bytecode deployment requires Hardhat with
+    // @parity/hardhat-polkadot-resolc plugin (two-step: upload blob + instantiate).
     return {
       success: true,
       abi,
-      pvmBlob,
       warnings: warnings.map((e: any) => ({
         severity: e.severity,
         message: e.formattedMessage || e.message,
